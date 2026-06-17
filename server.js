@@ -14,20 +14,52 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const onlineDonors = {}; 
 
-// SMS Gateway Integration (Fast2SMS & Twilio)
+// SMS Gateway Integration (MSG91, Fast2SMS, Twilio)
+const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
+const MSG91_TEMPLATE_ID = process.env.MSG91_TEMPLATE_ID; // Required for MSG91
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
 
 async function sendSMS(to, body) {
-    // 1. Fast2SMS (Indian Gateway)
+    let cleanPhone = to.replace(/\D/g, '');
+    if (cleanPhone.length > 10) {
+        cleanPhone = cleanPhone.slice(-10);
+    }
+
+    // 1. MSG91 (India - Very Cheap ~₹0.20/SMS)
+    if (MSG91_AUTH_KEY && MSG91_TEMPLATE_ID) {
+        try {
+            const response = await fetch('https://control.msg91.com/api/v5/flow/', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json',
+                    'authkey': MSG91_AUTH_KEY
+                },
+                body: JSON.stringify({
+                    template_id: MSG91_TEMPLATE_ID,
+                    short_url: "0",
+                    recipients: [{ mobiles: "91" + cleanPhone, message: body }]
+                })
+            });
+            const data = await response.json();
+            if (data.type === 'success') {
+                console.log(`✅ SMS sent successfully via MSG91 to ${cleanPhone}`);
+                return { success: true, provider: 'MSG91' };
+            } else {
+                console.error(`❌ MSG91 Error:`, data.message);
+            }
+        } catch (err) {
+            console.error(`❌ Error in MSG91 send:`, err.message);
+        }
+    }
+
+    // 2. Fast2SMS (Indian Gateway)
     if (FAST2SMS_API_KEY) {
         try {
-            let cleanPhone = to.replace(/\D/g, '');
-            if (cleanPhone.length > 10) {
-                cleanPhone = cleanPhone.slice(-10);
-            }
+            // cleanPhone is already defined above
             
             const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
                 method: 'POST',
