@@ -293,9 +293,17 @@ io.on('connection', (socket) => {
     socket.on('iceCandidate', (data) => io.to(data.to).emit('iceCandidate', data.candidate));
 });
 
+// Helper: escape special regex characters
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // API Routes
 app.post('/api/blood-requests', async (req, res) => {
     try {
+        // Trim city and state before saving
+        if (req.body.city) req.body.city = req.body.city.trim();
+        if (req.body.state) req.body.state = req.body.state.trim();
         const newRequest = new BloodRequest(req.body);
         await newRequest.save();
         res.status(201).json({ success: true, request: newRequest });
@@ -308,8 +316,8 @@ app.get('/api/blood-requests/district', async (req, res) => {
     try {
         const { city, state } = req.query;
         let query = {};
-        if (city) query.city = { $regex: new RegExp(city, "i") };
-        if (state) query.state = { $regex: new RegExp(state, "i") };
+        if (city) query.city = { $regex: new RegExp(escapeRegex(city.trim()), "i") };
+        if (state) query.state = { $regex: new RegExp(escapeRegex(state.trim()), "i") };
         
         const requests = await BloodRequest.find(query).sort({ createdAt: -1 });
         res.json(requests);
@@ -319,6 +327,10 @@ app.get('/api/blood-requests/district', async (req, res) => {
 });
 
 app.post('/api/donors', async (req, res) => {
+    // Trim city, state, and zipCode before saving
+    if (req.body.city) req.body.city = req.body.city.trim();
+    if (req.body.state) req.body.state = req.body.state.trim();
+    if (req.body.zipCode) req.body.zipCode = req.body.zipCode.trim();
     const newDonor = new Donor(req.body);
     await newDonor.save();
     io.emit('donorCountUpdate', await Donor.countDocuments());
@@ -401,9 +413,9 @@ app.put('/api/donors/:id', async (req, res) => {
 app.get('/api/donors/search', async (req, res) => {
     const { bloodGroup, city, state, zipCode } = req.query;
     let query = { bloodGroup };
-    if (city) query.city = { $regex: new RegExp(city, "i") };
-    if (state) query.state = { $regex: new RegExp(state, "i") };
-    if (zipCode) query.zipCode = zipCode;
+    if (city) query.city = { $regex: new RegExp(escapeRegex(city.trim()), "i") };
+    if (state) query.state = { $regex: new RegExp(escapeRegex(state.trim()), "i") };
+    if (zipCode) query.zipCode = zipCode.trim();
     
     const donors = await Donor.find(query).select('-password');
     
