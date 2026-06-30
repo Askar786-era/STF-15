@@ -508,12 +508,16 @@ app.post('/api/messages/broadcast', async (req, res) => {
 
     // Send SMS to all matching donors (sequentially to avoid rate limits)
     let sentCount = 0;
+const failedPhones = [];
     for (const donor of donors) {
         try {
             const result = await sendSMS(donor.phone, message);
             if (result && result.success) {
                 sentCount++;
                 console.log(`📢 [BROADCAST] SMS sent to ${donor.fullName} (${donor.phone})`);
+            } else {
+                failedPhones.push({ phone: donor.phone, error: result ? result.error : 'Unknown error' });
+                console.error(`❌ [BROADCAST] Failed to send to ${donor.phone}:`, result ? result.error : 'No response');
             }
         } catch (err) {
             console.error(`❌ [BROADCAST] Failed to send to ${donor.phone}:`, err.message);
@@ -529,7 +533,7 @@ app.post('/api/messages/broadcast', async (req, res) => {
     io.emit('globalStatsUpdate', { livesSaved: stat.value });
 
     console.log(`📢 [BROADCAST COMPLETE] Sent ${sentCount}/${donors.length} SMS for blood group ${bloodGroup} in ${city || state || 'district'}`);
-    res.json({ success: true, sent: sentCount, total: donors.length });
+    res.json({ success: true, sent: sentCount, total: donors.length, failures: failedPhones });
 });
 
 
