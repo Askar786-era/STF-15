@@ -193,17 +193,19 @@ if (window.location.pathname.includes('login')) {
             e.preventDefault();
             const phone = loginForm.querySelector('input[type="text"]').value.trim();
             const password = loginForm.querySelector('input[type="password"]').value;
+            const goOfflineCheckbox = document.getElementById('loginOffline');
+            const goOffline = goOfflineCheckbox ? goOfflineCheckbox.checked : false;
 
             try {
                 const response = await fetch(`${BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, password })
+                    body: JSON.stringify({ phone, password, goOffline })
                 });
                 const result = await response.json();
                 if (result.success) {
                     localStorage.setItem('donorInfo', JSON.stringify(result.donor));
-                    localStorage.setItem('isOnline', 'true'); // Auto-online for speed
+                    localStorage.setItem('isOnline', goOffline ? 'false' : 'true');
                     window.location.href = 'donor-dashboard.html';
                 } else {
                     alert('Invalid credentials');

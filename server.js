@@ -20,6 +20,11 @@ const bcrypt = require('bcryptjs');
 const Donor = require('./models/Donor');
 const Stats = require('./models/Stats');
 const BloodRequest = require('./models/BloodRequest');
+<<<<<<< Updated upstream
+=======
+const BloodBank = require('./models/BloodBank');
+const Fulfillment = require('./models/Fulfillment');
+>>>>>>> Stashed changes
 const { Server } = require('socket.io');
 const { decrypt, deterministicHash } = require('./utils/crypto');
 
@@ -225,6 +230,13 @@ io.on('connection', (socket) => {
         io.emit('donorCountUpdate', await Donor.countDocuments());
     });
 
+    socket.on('donorOffline', async (phone) => {
+        const hash = deterministicHash(phone);
+        await Donor.findOneAndUpdate({ phoneHash: hash }, { isOnline: false, socketId: null });
+        if (onlineDonors[phone]) delete onlineDonors[phone];
+        io.emit('donorCountUpdate', await Donor.countDocuments());
+    });
+
     socket.on('disconnect', async () => {
         await Donor.findOneAndUpdate({ socketId: socket.id }, { isOnline: false, socketId: null });
         io.emit('donorCountUpdate', await Donor.countDocuments());
@@ -371,7 +383,7 @@ app.post('/api/donors', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     try {
-        const { phone, password } = req.body;
+        const { phone, password, goOffline } = req.body;
         if (!phone || !password) {
             return res.status(400).json({ success: false, error: 'Phone and password are required.' });
         }
@@ -385,6 +397,11 @@ app.post('/api/login', async (req, res) => {
         if (!isMatch) {
             return res.json({ success: false, error: 'Invalid credentials' });
         }
+        
+        // Update isOnline status
+        donor.isOnline = !goOffline;
+        await donor.save();
+
         // Return decrypted donor data
         res.json({ success: true, donor: donor.decryptFields() });
     } catch (err) {
@@ -468,7 +485,7 @@ app.put('/api/donors/:id', async (req, res) => {
 
 app.get('/api/donors/search', async (req, res) => {
     const { bloodGroup, city, state, zipCode } = req.query;
-    let query = { bloodGroup };
+    let query = { bloodGroup, isOnline: true };
     if (city) query.city = { $regex: new RegExp(flexibleRegex(city), "i") };
     if (state) query.state = { $regex: new RegExp(flexibleRegex(state), "i") };
     if (zipCode) query.zipCode = zipCode.trim();
@@ -562,6 +579,177 @@ app.post('/api/messages/broadcast', async (req, res) => {
     res.json({ success: true, sent: sentCount, total: donors.length, failures: failedPhones });
 });
 
+<<<<<<< Updated upstream
+=======
+// Fetch all blood requests for a specific receiver's phone number
+app.get('/api/blood-requests/my-requests', async (req, res) => {
+    try {
+        const { phone } = req.query;
+        if (!phone) {
+            return res.status(400).json({ success: false, error: 'Phone number is required.' });
+        }
+        
+        const hash = deterministicHash(phone);
+        const requests = await BloodRequest.find({ phoneHash: hash }).sort({ createdAt: -1 });
+        
+        const decryptedRequests = requests.map(r => r.decryptFields());
+        res.json({ success: true, requests: decryptedRequests });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Remove a blood request
+app.delete('/api/blood-requests/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const request = await BloodRequest.findByIdAndDelete(id);
+        if (!request) {
+            return res.status(404).json({ success: false, error: 'Blood request not found.' });
+        }
+        res.json({ success: true, message: 'Blood request removed successfully.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Fulfill and remove a blood request
+app.post('/api/blood-requests/:id/fulfill', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { donorName, donorPhone, donorEmail, unitsRequired } = req.body;
+        if (!donorName || !donorPhone || !donorEmail || !unitsRequired) {
+            return res.status(400).json({ success: false, error: 'All fields are required.' });
+        }
+        
+        // Save fulfillment details
+        const fulfillment = new Fulfillment({
+            donorName,
+            donorPhone,
+            donorEmail,
+            unitsRequired,
+            bloodRequest: id
+        });
+        await fulfillment.save();
+
+        // Increment livesSaved
+        try {
+            const stat = await Stats.findOneAndUpdate({ key: 'livesSaved' }, { $inc: { value: 1 } }, { upsert: true, new: true });
+            io.emit('globalStatsUpdate', { livesSaved: stat.value });
+        } catch (statErr) {
+            console.error('Error updating stats:', statErr);
+        }
+
+        // Delete the request
+        await BloodRequest.findByIdAndDelete(id);
+
+        res.json({ success: true, message: 'Request fulfilled and removed successfully.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+
+// ─── Blood Bank Routes ──────────────────────────────────────────────────────
+
+// Register a blood bank
+app.post('/api/bloodbank/register', async (req, res) => {
+    try {
+        const { bankName, district, state, phone, address, password } = req.body;
+        if (!bankName || !district || !state || !phone || !password) {
+            return res.status(400).json({ success: false, error: 'bankName, district, state, phone, and password are required.' });
+        }
+        const existing = await BloodBank.findOne({ bankName: { $regex: new RegExp('^' + bankName.trim() + '$', 'i') }, district: district.trim(), state: state.trim() });
+        if (existing) {
+            return res.status(409).json({ success: false, error: 'A blood bank with this name already exists in that district.' });
+        }
+        const bank = new BloodBank({ bankName: bankName.trim(), district: district.trim(), state: state.trim(), phone: phone.trim(), address: (address || '').trim(), password });
+        await bank.save();
+        res.status(201).json({ success: true, bank: { _id: bank._id, bankName: bank.bankName, district: bank.district, state: bank.state, phone: bank.phone, address: bank.address, inventory: bank.inventory } });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Blood bank admin login
+app.post('/api/bloodbank/login', async (req, res) => {
+    try {
+        const { bankName, district, state, password } = req.body;
+        if (!bankName || !password) {
+            return res.status(400).json({ success: false, error: 'bankName and password are required.' });
+        }
+        let query = { bankName: { $regex: new RegExp('^' + bankName.trim() + '$', 'i') } };
+        if (district) query.district = { $regex: new RegExp('^' + district.trim() + '$', 'i') };
+        if (state)    query.state    = { $regex: new RegExp('^' + state.trim() + '$', 'i') };
+        const bank = await BloodBank.findOne(query);
+        if (!bank) return res.json({ success: false, error: 'Blood bank not found.' });
+        const isMatch = await bcrypt.compare(password, bank.password);
+        if (!isMatch) return res.json({ success: false, error: 'Invalid password.' });
+        res.json({ success: true, bank: { _id: bank._id, bankName: bank.bankName, district: bank.district, state: bank.state, phone: bank.phone, address: bank.address, inventory: bank.inventory } });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Get all blood banks in a district (public)
+app.get('/api/bloodbank/district', async (req, res) => {
+    try {
+        const { district, state, bloodGroup } = req.query;
+        let query = {};
+        if (district) query.district = { $regex: new RegExp(flexibleRegex(district), 'i') };
+        if (state)    query.state    = { $regex: new RegExp(flexibleRegex(state), 'i') };
+        if (bloodGroup) {
+            query.inventory = {
+                $elemMatch: {
+                    bloodGroup: bloodGroup.trim(),
+                    available: true,
+                    units: { $gt: 0 }
+                }
+            };
+        }
+        const banks = await BloodBank.find(query).select('-password');
+        res.json({ success: true, banks });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Update inventory for a blood bank (admin)
+app.put('/api/bloodbank/:id/inventory', async (req, res) => {
+    try {
+        const { bloodGroup, units, available } = req.body;
+        if (!bloodGroup) return res.status(400).json({ success: false, error: 'bloodGroup is required.' });
+        const bank = await BloodBank.findById(req.params.id);
+        if (!bank) return res.status(404).json({ success: false, error: 'Blood bank not found.' });
+        const idx = bank.inventory.findIndex(i => i.bloodGroup === bloodGroup);
+        if (idx >= 0) {
+            if (units !== undefined)     bank.inventory[idx].units     = Number(units);
+            if (available !== undefined) bank.inventory[idx].available = Boolean(available);
+        } else {
+            bank.inventory.push({ bloodGroup, units: Number(units) || 0, available: available !== false });
+        }
+        await bank.save();
+        res.json({ success: true, inventory: bank.inventory });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Remove a blood group from inventory (mark unavailable / delete entry)
+app.delete('/api/bloodbank/:id/inventory/:bloodGroup', async (req, res) => {
+    try {
+        const bank = await BloodBank.findById(req.params.id);
+        if (!bank) return res.status(404).json({ success: false, error: 'Blood bank not found.' });
+        bank.inventory = bank.inventory.filter(i => i.bloodGroup !== req.params.bloodGroup);
+        await bank.save();
+        res.json({ success: true, inventory: bank.inventory });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+>>>>>>> Stashed changes
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

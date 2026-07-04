@@ -6,6 +6,16 @@
     <title>Stranger To Friend</title>
     <link rel="icon" type="image/jpeg" href="logo.jpg">
     <link href="STF.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((reg) => console.log('Service Worker registered.', reg))
+                    .catch((err) => console.log('Service Worker registration failed.', err));
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -16,7 +26,8 @@
             <p>produced by-ERAS</p>
         </div>
 
-        <div class="right-header" id="headerAuth">
+        <div class="right-header" id="headerAuth" style="display: flex; align-items: center; gap: 10px;">
+            <button id="installAppBtn" style="display: none; background: #e53935; color: white; border: none; padding: 10px 15px; border-radius: 16px; font-weight: bold; cursor: pointer; align-items: center; gap: 6px; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">📥 Install App</button>
             <a href="STF%20login.html"><button class="login-btn">🔒 Login</button></a>
             <span class="active-status">● Active</span>
         </div>
@@ -164,6 +175,7 @@
             if (authContainer) {
                 authContainer.innerHTML = `
                     <div style="display:flex; align-items:center; gap:15px;">
+                        <button id="installAppBtn" style="display: none; background: #e53935; color: white; border: none; padding: 10px 15px; border-radius: 16px; font-weight: bold; cursor: pointer; align-items: center; gap: 6px; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">📥 Install App</button>
                         <a href="donor-dashboard.html" style="text-decoration:none; color:#333; font-weight:bold;">
                             👤 ${donorInfo.fullName}
                         </a>
@@ -173,6 +185,37 @@
                 `;
             }
         }
+
+        // PWA Installation script
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installAppBtn');
+            if (btn) {
+                btn.style.display = 'flex';
+            }
+        });
+
+        document.addEventListener('click', async (e) => {
+            if (e.target && e.target.id === 'installAppBtn') {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response to the install prompt: ${outcome}`);
+                    deferredPrompt = null;
+                    const btn = document.getElementById('installAppBtn');
+                    if (btn) btn.style.display = 'none';
+                }
+            }
+        });
+
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('STF App was installed.');
+            const btn = document.getElementById('installAppBtn');
+            if (btn) btn.style.display = 'none';
+        });
     </script>
 </body>
 </html>

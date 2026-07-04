@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receiver Dashboard - Stranger to Friends</title>
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <style>
+        :root {
+            --primary: #cc0000;
+            --primary-hover: #b30000;
+            --bg: #f5f7f8;
+            --card-bg: #ffffff;
+            --text-dark: #333333;
+            --text-muted: #666666;
+            --success: #28a745;
+            --border-radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .back-btn {
+            background: #ffffff;
+            color: var(--text-dark);
+            border: 1px solid #ddd;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            background: #eee;
+            transform: translateY(-2px);
+        }
+
+        .dashboard-card {
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(0,0,0,0.03);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        /* Phone form setup */
+        .phone-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .phone-form label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .phone-form input {
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1.5px solid #ddd;
+            font-size: 15px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .phone-form input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.1);
+        }
+
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+
+        /* Request list layout */
+        .request-card {
+            background: #fafafa;
+            border-left: 6px solid var(--primary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid #f0f0f0;
+            transition: var(--transition);
+        }
+
+        .request-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .request-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .request-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .patient-name {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--text-dark);
+        }
+
+        .blood-badge {
+            background: #ffe5e5;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .request-details {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .delete-btn {
+            background: #fff0f0;
+            color: var(--primary);
+            border: 1px solid rgba(204, 0, 0, 0.1);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .delete-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .no-requests {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        .active-phone-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f7f9fa;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 13px;
+        }
+
+        .change-phone-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-bar">
+            <a href="STF3.html" class="back-btn">← Request Page</a>
+            <a href="STF.html" class="back-btn">Home</a>
+        </div>
+
+        <div class="dashboard-card">
+            <h2>📋 Receiver Dashboard</h2>
+            <p class="subtitle">Manage and remove your active blood requests</p>
+
+            <!-- Phone Setup View -->
+            <div id="phoneSetupView" style="display: none;">
+                <p style="font-size: 14px; color: var(--text-muted); text-align: center; margin-bottom: 20px;">
+                    Enter the phone number used to submit your blood request to view and manage it.
+                </p>
+                <form id="phoneForm" class="phone-form">
+                    <label for="requesterPhone">📱 Registered Phone Number</label>
+                    <input type="tel" id="requesterPhoneInput" placeholder="Enter your 10-digit phone number" required pattern="[0-9]{10}">
+                    <button type="submit" class="submit-btn">Search Requests →</button>
+                </form>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboardView" style="display: none;">
+                <div class="active-phone-info">
+                    <span>Active Phone: <strong id="activePhoneDisplay">-</strong></span>
+                    <button class="change-phone-btn" id="changePhoneBtn">Change Phone</button>
+                </div>
+
+                <div id="requestsList">
+                    <div style="text-align:center; padding: 20px;">🔍 Loading requests...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = (window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:5000') + '/api';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const phoneSetupView = document.getElementById('phoneSetupView');
+            const dashboardView = document.getElementById('dashboardView');
+            const phoneForm = document.getElementById('phoneForm');
+            const requesterPhoneInput = document.getElementById('requesterPhoneInput');
+            const activePhoneDisplay = document.getElementById('activePhoneDisplay');
+            const changePhoneBtn = document.getElementById('changePhoneBtn');
+
+            function getSavedPhone() {
+                return localStorage.getItem('requesterPhone');
+            }
+
+            function init() {
+                const phone = getSavedPhone();
+                if (phone) {
+                    activePhoneDisplay.innerText = phone;
+                    phoneSetupView.style.display = 'none';
+                    dashboardView.style.display = 'block';
+                    loadRequests(phone);
+                } else {
+                    phoneSetupView.style.display = 'block';
+                    dashboardView.style.display = 'none';
+                }
+            }
+
+            phoneForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const phone = requesterPhoneInput.value.trim();
+                if (phone.length === 10) {
+                    localStorage.setItem('requesterPhone', phone);
+                    init();
+                } else {
+                    alert('Please enter a valid 10-digit phone number.');
+                }
+            });
+
+            changePhoneBtn.addEventListener('click', () => {
+                localStorage.removeItem('requesterPhone');
+                init();
+            });
+
+            async function loadRequests(phone) {
+                const listEl = document.getElementById('requestsList');
+                listEl.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Loading your requests...</div>';
+
+                try {
+                    const response = await fetch(`${BASE_URL}/blood-requests/my-requests?phone=${encodeURIComponent(phone)}`);
+                    const data = await response.json();
+
+                    if (!data.success || !data.requests || data.requests.length === 0) {
+                        listEl.innerHTML = '<div class="no-requests">🎉 No active blood requests found for this phone number.</div>';
+                        return;
+                    }
+
+                    listEl.innerHTML = '';
+                    data.requests.forEach(req => {
+                        const card = document.createElement('div');
+                        card.className = 'request-card';
+                        
+                        const formattedDate = new Date(req.createdAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        card.innerHTML = `
+                            <div class="request-info">
+                                <div class="request-header">
+                                    <span class="patient-name">👤 ${req.patientName}</span>
+                                    <span class="blood-badge">${req.bloodGroup}</span>
+                                </div>
+                                <div class="request-details">
+                                    📍 <strong>District:</strong> ${req.city}, ${req.state}<br>
+                                    ${req.hospital ? `🏥 <strong>Hospital:</strong> ${req.hospital}<br>` : ''}
+                                    ${req.message ? `💬 <strong>Message:</strong> ${req.message}<br>` : ''}
+                                    <span style="display:inline-block; margin-top: 4px; color: #999; font-size: 11px;">Requested: ${formattedDate}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="received-details.html?id=${req._id}" class="delete-btn" style="text-decoration: none; display: inline-block; text-align: center;">✅ Received / Remove</a>
+                            </div>
+                        `;
+                        listEl.appendChild(card);
+                    });
+                } catch (err) {
+                    console.error(err);
+                    listEl.innerHTML = '<div style="color:red; text-align:center; padding:20px;">Error loading requests. Please try again.</div>';
+                }
+            }
+
+            window.removeRequest = async (id) => {
+                if (confirm('Are you sure you want to remove this blood request? This will delete it from the district list.')) {
+                    try {
+                        const res = await fetch(`${BASE_URL}/blood-requests/${id}`, {
+                            method: 'DELETE'
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            alert('Request removed successfully!');
+                            const phone = getSavedPhone();
+                            if (phone) loadRequests(phone);
+                        } else {
+                            alert('Error: ' + (data.error || 'Failed to delete request'));
+                        }
+                    } catch (err) {
+                        alert('Network error. Failed to remove request.');
+                    }
+                }
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
