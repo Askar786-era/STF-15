@@ -20,11 +20,8 @@ const bcrypt = require('bcryptjs');
 const Donor = require('./models/Donor');
 const Stats = require('./models/Stats');
 const BloodRequest = require('./models/BloodRequest');
-<<<<<<< Updated upstream
-=======
 const BloodBank = require('./models/BloodBank');
 const Fulfillment = require('./models/Fulfillment');
->>>>>>> Stashed changes
 const { Server } = require('socket.io');
 const { decrypt, deterministicHash } = require('./utils/crypto');
 
@@ -579,8 +576,6 @@ app.post('/api/messages/broadcast', async (req, res) => {
     res.json({ success: true, sent: sentCount, total: donors.length, failures: failedPhones });
 });
 
-<<<<<<< Updated upstream
-=======
 // Fetch all blood requests for a specific receiver's phone number
 app.get('/api/blood-requests/my-requests', async (req, res) => {
     try {
@@ -749,7 +744,6 @@ app.delete('/api/bloodbank/:id/inventory/:bloodGroup', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
->>>>>>> Stashed changes
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
